@@ -1,10 +1,11 @@
 import { PALETTES, PALETTE_ORDER, FONTS, FONT_ORDER, FONT_SIZES, FONT_SIZE_ORDER } from '../palettes.js';
 import { getTheme, setTheme, getPalette, setPalette, getFont, setFont, getFontSize, setFontSize } from '../settings.js';
 import { getNotesSnapshot, TYPE_LABELS } from './notes-view.js';
-import { exportNotesAsText, exportNotesForPentagrama } from '../export.js';
+import { exportNotesAsText, exportNotesForPentagrama, sendNotesToPentagrama } from '../export.js';
 
 let exportTypeFilter = 'todos';
 let exportSelectedIds = null; // null = "todas las que matchean el filtro"
+let exportArtist = '';
 
 export function openSettingsModal() {
   const overlay = document.createElement('div');
@@ -170,6 +171,20 @@ function renderExportPanel() {
 
   const cancionesSeleccionadas = notes.filter((n) => n.type === 'cancion' && selected.has(n.id)).length;
 
+  const pentagramaSection = cancionesSeleccionadas
+    ? `
+      <section class="settings-section">
+        <h3>Enviar a Pentagrama</h3>
+        <input type="text" id="export-artist" class="select-control" placeholder="Nombre del artista (opcional)" value="${escapeAttr(exportArtist)}" />
+        <div class="export-actions">
+          <button class="btn btn-primary" id="export-pentagrama-open">Abrir en Pentagrama (${cancionesSeleccionadas})</button>
+          <button class="btn btn-ghost" id="export-pentagrama-download">Descargar .json en cambio</button>
+        </div>
+        <p class="login-hint">"Abrir en Pentagrama" te lleva directo a la app con las canciones ya importadas.</p>
+      </section>
+    `
+    : '';
+
   return `
     <section class="settings-section">
       <h3>Qué exportar</h3>
@@ -182,12 +197,9 @@ function renderExportPanel() {
       </div>
       <ul class="export-list">${items}</ul>
     </section>
+    ${pentagramaSection}
     <section class="settings-section export-actions">
       <button class="btn btn-primary" id="export-txt" ${!selected.size ? 'disabled' : ''}>Descargar como .txt</button>
-      <button class="btn btn-ghost" id="export-pentagrama" ${!cancionesSeleccionadas ? 'disabled' : ''}>
-        Enviar canciones a Pentagrama (.json)${cancionesSeleccionadas ? ` (${cancionesSeleccionadas})` : ''}
-      </button>
-      <p class="login-hint">"Enviar a Pentagrama" descarga un .json con las canciones seleccionadas, listo para abrir con "Importar canciones" en Pentagrama.</p>
     </section>
   `;
 }
@@ -232,9 +244,19 @@ function wireExportPanel(overlay) {
     if (notes.length) exportNotesAsText(notes);
   });
 
-  panel.querySelector('#export-pentagrama')?.addEventListener('click', () => {
+  panel.querySelector('#export-artist')?.addEventListener('input', (e) => {
+    exportArtist = e.target.value;
+  });
+
+  panel.querySelector('#export-pentagrama-open')?.addEventListener('click', () => {
     const notes = selectedNotes();
-    const count = exportNotesForPentagrama(notes);
+    const count = sendNotesToPentagrama(notes, exportArtist);
+    if (!count) alert('No hay canciones en la selección actual.');
+  });
+
+  panel.querySelector('#export-pentagrama-download')?.addEventListener('click', () => {
+    const notes = selectedNotes();
+    const count = exportNotesForPentagrama(notes, exportArtist);
     if (!count) alert('No hay canciones en la selección actual.');
   });
 }
