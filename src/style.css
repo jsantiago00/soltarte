@@ -521,6 +521,10 @@ button {
 .note-title-input:focus {
   outline: none;
 }
+.note-title-input:read-only,
+.note-content-textarea:read-only {
+  cursor: default;
+}
 .type-toggle {
   display: flex;
   gap: 0.25rem;
@@ -533,10 +537,15 @@ button {
   font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
 }
 .type-toggle-btn.is-active {
   background: var(--accent-soft);
   border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 .form-hint {

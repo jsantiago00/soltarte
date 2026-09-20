@@ -4,7 +4,14 @@ import { getFormById, buildTemplateContent } from '../forms-data.js';
 import { countLineSyllables } from '../syllables.js';
 
 export const TYPE_LABELS = { cancion: 'Canción', poema: 'Poema', otro: 'Otro' };
-const TYPE_ICONS = { cancion: '🎵', poema: '📝', otro: '📄' };
+const FEATHER_ICON = `
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5l6.74-6.76Z" />
+    <line x1="16" y1="8" x2="2" y2="22" />
+    <line x1="17.5" y1="15" x2="9" y2="15" />
+  </svg>
+`;
+const TYPE_ICONS = { cancion: '🎵', poema: FEATHER_ICON, otro: '📄' };
 const SAVE_DELAY = 700;
 const MAX_NOTES_PER_USER = 100;
 
@@ -15,6 +22,7 @@ const state = {
   unsubscribe: null,
   notes: [],
   selectedId: null,
+  editingId: null, // id de la nota en modo edición (null = solo lectura/lista)
   localPatch: null, // { id, title, content, type }
   saveTimer: null,
   search: '',
@@ -32,6 +40,7 @@ export function mountNotesView(container, user) {
   state.container = container;
   state.notes = [];
   state.selectedId = null;
+  state.editingId = null;
   state.localPatch = null;
 
   container.innerHTML = `
@@ -88,7 +97,14 @@ export function mountNotesView(container, user) {
     renderGrid(container);
     if (state.selectedId && !state.localPatch) {
       const current = notes.find((n) => n.id === state.selectedId);
-      if (current) renderEditor(container, current);
+      // No reconstruir el editor mientras el usuario tiene el foco ahí: en
+      // cloud mode, el eco del propio guardado (onSnapshot) puede llegar
+      // justo después de que se limpia localPatch, y reemplazar el
+      // textarea a mitad de tipeo le hace perder el foco - en el celu eso
+      // minimiza el teclado de golpe.
+      const pane = el(container, '#editor-pane');
+      const isFocusedInEditor = pane && pane.contains(document.activeElement);
+      if (current && !isFocusedInEditor) renderEditor(container, current);
     }
   };
 
@@ -109,6 +125,7 @@ export function unmountNotesView() {
   state.user = null;
   state.notes = [];
   state.selectedId = null;
+  state.editingId = null;
   state.localPatch = null;
 }
 
@@ -182,6 +199,7 @@ function renderGrid(container) {
 function selectNote(container, id) {
   flushSave();
   state.selectedId = id;
+  state.editingId = null; // abrir siempre en modo lectura; doble toque para editar
   state.localPatch = null;
   const note = state.notes.find((n) => n.id === id);
   if (note) renderEditor(container, note);
@@ -222,6 +240,7 @@ async function addNote(data) {
 // quedaría vacío.
 function selectCreatedNote(container, note) {
   state.selectedId = note.id;
+  state.editingId = note.id; // una nota recién creada se abre lista para escribir
   state.localPatch = null;
   if (!state.notes.some((n) => n.id === note.id)) state.notes = [note, ...state.notes];
   renderEditor(container, note);
@@ -232,11 +251,12 @@ function renderEditor(container, note) {
   const pane = el(container, '#editor-pane');
   const form = note.formId ? getFormById(note.formId) : null;
   let currentType = note.type;
+  const isEditing = state.editingId === note.id;
 
   pane.innerHTML = `
     <div class="editor-toolbar">
       <button class="btn btn-ghost icon-btn" id="back-to-list" title="Volver" aria-label="Volver">←</button>
-      <input type="text" id="note-title" class="note-title-input" placeholder="Título" value="${escapeAttr(note.title || '')}" />
+      <input type="text" id="note-title" class="note-title-input" placeholder="Título" value="${escapeAttr(note.title || '')}" ${isEditing ? '' : 'readonly'} />
       <div class="type-toggle" role="group" aria-label="Tipo de escrito">
         ${Object.keys(TYPE_LABELS)
           .map(
@@ -245,10 +265,11 @@ function renderEditor(container, note) {
           )
           .join('')}
       </div>
+      ${!isEditing ? '<button class="btn btn-ghost icon-btn" id="edit-note" title="Editar" aria-label="Editar">✏️</button>' : ''}
       <button class="btn btn-ghost btn-danger icon-btn" id="delete-note" title="Eliminar" aria-label="Eliminar">🗑️</button>
     </div>
     ${form ? `<div class="form-hint">Escribiendo con la forma <strong>${form.name}</strong> · ${form.scheme}</div>` : ''}
-    <textarea id="note-content" class="note-content-textarea" placeholder="Empezá a escribir...">${escapeHtml(note.content || '')}</textarea>
+    <textarea id="note-content" class="note-content-textarea" placeholder="Empezá a escribir..." ${isEditing ? '' : 'readonly'}>${escapeHtml(note.content || '')}</textarea>
     ${form && form.template.syllableTargets ? '<div id="syllable-hints" class="syllable-hints"></div>' : ''}
     <div class="save-status" id="save-status"></div>
   `;
@@ -273,8 +294,23 @@ function renderEditor(container, note) {
     state.saveTimer = setTimeout(() => flushSave(saveStatus), SAVE_DELAY);
   }
 
+  // Las notas se abren en modo lectura (deslizar/scrollear no dispara el
+  // teclado): doble toque en el título o el texto, o el botón ✏️, pasan a
+  // modo edición recién ahí.
+  function enterEditMode(focusEl) {
+    if (state.editingId === note.id) return;
+    state.editingId = note.id;
+    titleInput.readOnly = false;
+    contentArea.readOnly = false;
+    el(pane, '#edit-note')?.remove();
+    focusEl?.focus();
+  }
+
   titleInput.addEventListener('input', onEdit);
   contentArea.addEventListener('input', onEdit);
+  titleInput.addEventListener('dblclick', () => enterEditMode(titleInput));
+  contentArea.addEventListener('dblclick', () => enterEditMode(contentArea));
+  el(pane, '#edit-note')?.addEventListener('click', () => enterEditMode(contentArea));
 
   pane.querySelectorAll('[data-type-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -292,6 +328,7 @@ function renderEditor(container, note) {
       await deleteLocalNote(note.id);
     }
     state.selectedId = null;
+    state.editingId = null;
     state.localPatch = null;
     pane.innerHTML = `<div class="editor-empty"><p>Elegí un escrito de la lista o creá uno nuevo.</p></div>`;
     document.querySelector('.notes-layout')?.classList.remove('show-editor');
