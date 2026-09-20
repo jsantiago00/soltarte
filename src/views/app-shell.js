@@ -3,7 +3,12 @@ import { openSettingsModal } from './settings-view.js';
 import { mountNotesView, unmountNotesView, createNoteFromTemplate } from './notes-view.js';
 import { mountLearnView, unmountLearnView } from './learn-view.js';
 
-let activeTab = 'notes';
+const BOOK_ICON = `
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 5.5c1.9-.95 4.1-.95 6 0v13.2c-1.9-.95-4.1-.95-6 0V5.5Z" />
+    <path d="M20 5.5c-1.9-.95-4.1-.95-6 0v13.2c1.9-.95 4.1-.95 6 0V5.5Z" />
+  </svg>
+`;
 
 export function mountAppShell(root, user) {
   root.innerHTML = `
@@ -17,11 +22,8 @@ export function mountAppShell(root, user) {
           </svg>
           <span>SoltArte</span>
         </div>
-        <nav class="tabs" role="tablist">
-          <button class="tab-btn is-active" data-tab="notes" role="tab" aria-selected="true">Mis escritos</button>
-          <button class="tab-btn" data-tab="learn" role="tab" aria-selected="false">Aprender formas</button>
-        </nav>
         <div class="user-menu">
+          <button id="learn-btn" class="btn btn-ghost icon-btn" title="Aprender formas" aria-label="Aprender formas">${BOOK_ICON}</button>
           <button id="settings-btn" class="btn btn-ghost icon-btn" title="Configuración" aria-label="Configuración">⚙️</button>
           ${
             user
@@ -35,22 +37,37 @@ export function mountAppShell(root, user) {
       </header>
       <main class="app-main">
         <div id="view-notes" class="view"></div>
-        <div id="view-learn" class="view is-hidden"></div>
       </main>
+      <div class="learn-overlay" id="learn-overlay">
+        <div class="learn-overlay-header">
+          <button id="learn-overlay-back" class="btn btn-ghost icon-btn" title="Volver" aria-label="Volver">←</button>
+          <span class="learn-overlay-title">Aprender formas</span>
+        </div>
+        <div id="view-learn" class="learn-overlay-body"></div>
+      </div>
     </div>
   `;
 
   mountNotesView(document.getElementById('view-notes'), user);
-  mountLearnView(document.getElementById('view-learn'), {
-    onUseTemplate: (form) => {
-      createNoteFromTemplate(form);
-      switchTab('notes');
-    },
-  });
 
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-  });
+  function openLearn() {
+    document.getElementById('learn-overlay').classList.add('open');
+    mountLearnView(document.getElementById('view-learn'), {
+      onUseTemplate: (form) => {
+        createNoteFromTemplate(form);
+        closeLearn();
+      },
+    });
+  }
+
+  function closeLearn() {
+    document.getElementById('learn-overlay').classList.remove('open');
+    unmountLearnView();
+    document.getElementById('view-learn').innerHTML = '';
+  }
+
+  document.getElementById('learn-btn').addEventListener('click', openLearn);
+  document.getElementById('learn-overlay-back').addEventListener('click', closeLearn);
 
   document.getElementById('settings-btn').addEventListener('click', () => {
     openSettingsModal();
@@ -68,19 +85,7 @@ export function mountAppShell(root, user) {
   });
 }
 
-function switchTab(tab) {
-  activeTab = tab;
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    const isActive = btn.dataset.tab === tab;
-    btn.classList.toggle('is-active', isActive);
-    btn.setAttribute('aria-selected', String(isActive));
-  });
-  document.getElementById('view-notes').classList.toggle('is-hidden', tab !== 'notes');
-  document.getElementById('view-learn').classList.toggle('is-hidden', tab !== 'learn');
-}
-
 export function unmountAppShell() {
   unmountNotesView();
   unmountLearnView();
-  activeTab = 'notes';
 }

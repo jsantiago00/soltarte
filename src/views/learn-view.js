@@ -68,6 +68,7 @@ function renderDetail(container, formId) {
 
   detail.innerHTML = `
     <div class="learn-detail-inner">
+      <button class="btn btn-ghost icon-btn learn-back-btn" id="learn-back-to-list" title="Volver a las formas" aria-label="Volver a las formas">←</button>
       <h2>${form.name}</h2>
       <p class="form-origin">${form.origin}</p>
       <p class="form-summary">${form.summary}</p>
@@ -107,6 +108,12 @@ function renderDetail(container, formId) {
   detail.querySelector('#use-template-btn').addEventListener('click', () => {
     onUseTemplateCallback?.(form);
   });
+
+  detail.querySelector('#learn-back-to-list').addEventListener('click', () => {
+    container.querySelector('.learn-layout')?.classList.remove('show-detail');
+  });
+
+  container.querySelector('.learn-layout')?.classList.add('show-detail');
 }
 
 function escapeHtml(str) {
