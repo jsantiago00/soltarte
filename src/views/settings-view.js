@@ -152,8 +152,9 @@ function renderExportPanel() {
   const notes = filteredExportNotes();
   const selected = exportSelectedIds || new Set(notes.map((n) => n.id));
 
+  const TYPE_LABELS_PLURAL = { cancion: 'Canciones', poema: 'Poemas', otro: 'Otros' };
   const typeChips = ['todos', 'cancion', 'poema', 'otro'].map((t) => {
-    const label = t === 'todos' ? 'Todo' : TYPE_LABELS[t] + 's';
+    const label = t === 'todos' ? 'Todo' : TYPE_LABELS_PLURAL[t];
     return `<button class="chip ${exportTypeFilter === t ? 'is-active' : ''}" data-export-type="${t}">${label}</button>`;
   }).join('');
 

@@ -5,3 +5,4 @@ graphify-out
 .env.local
 *.local
 .DS_Store
+vite.config.js.timestamp-*.mjs
