@@ -255,18 +255,24 @@ function renderEditor(container, note) {
 
   pane.innerHTML = `
     <div class="editor-toolbar">
-      <button class="btn btn-ghost icon-btn" id="back-to-list" title="Volver" aria-label="Volver">←</button>
-      <input type="text" id="note-title" class="note-title-input" placeholder="Título" value="${escapeAttr(note.title || '')}" ${isEditing ? '' : 'readonly'} />
-      <div class="type-toggle" role="group" aria-label="Tipo de escrito">
-        ${Object.keys(TYPE_LABELS)
-          .map(
-            (t) =>
-              `<button type="button" class="type-toggle-btn ${t === currentType ? 'is-active' : ''}" data-type-toggle="${t}" title="${TYPE_LABELS[t]}" aria-label="${TYPE_LABELS[t]}">${TYPE_ICONS[t]}</button>`,
-          )
-          .join('')}
+      <div class="editor-toolbar-top">
+        <button class="btn btn-ghost icon-btn" id="back-to-list" title="Volver" aria-label="Volver">←</button>
+        <input type="text" id="note-title" class="note-title-input" placeholder="Título" value="${escapeAttr(note.title || '')}" ${isEditing ? '' : 'readonly'} />
       </div>
-      ${!isEditing ? '<button class="btn btn-ghost icon-btn" id="edit-note" title="Editar" aria-label="Editar">✏️</button>' : ''}
-      <button class="btn btn-ghost btn-danger icon-btn" id="delete-note" title="Eliminar" aria-label="Eliminar">🗑️</button>
+      <div class="editor-toolbar-actions">
+        <div class="type-toggle" role="group" aria-label="Tipo de escrito">
+          ${Object.keys(TYPE_LABELS)
+            .map(
+              (t) =>
+                `<button type="button" class="type-toggle-btn ${t === currentType ? 'is-active' : ''}" data-type-toggle="${t}" title="${TYPE_LABELS[t]}" aria-label="${TYPE_LABELS[t]}">${TYPE_ICONS[t]}</button>`,
+            )
+            .join('')}
+        </div>
+        <div class="editor-toolbar-buttons">
+          ${!isEditing ? '<button class="btn btn-ghost icon-btn" id="edit-note" title="Editar" aria-label="Editar">✏️</button>' : ''}
+          <button class="btn btn-ghost btn-danger icon-btn" id="delete-note" title="Eliminar" aria-label="Eliminar">🗑️</button>
+        </div>
+      </div>
     </div>
     ${form ? `<div class="form-hint">Escribiendo con la forma <strong>${form.name}</strong> · ${form.scheme}</div>` : ''}
     <textarea id="note-content" class="note-content-textarea" placeholder="Empezá a escribir..." ${isEditing ? '' : 'readonly'}>${escapeHtml(note.content || '')}</textarea>

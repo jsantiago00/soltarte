@@ -501,11 +501,26 @@ button {
 
 .editor-toolbar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.6rem;
   padding: 0.9rem 1.25rem;
   border-bottom: 1px solid var(--line);
+}
+.editor-toolbar-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.editor-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
   flex-wrap: wrap;
+}
+.editor-toolbar-buttons {
+  display: flex;
+  gap: 0.25rem;
 }
 .note-title-input {
   flex: 1;
@@ -995,6 +1010,21 @@ button {
 }
 
 @media (max-width: 640px) {
+  /* Chips de tipo + selector de orden: si no entran los 4 chips más el
+     selector en una sola fila, se apilan enteros en dos filas en vez de
+     dejar que un chip suelto (p.ej. "Otros") se corte a la línea de abajo
+     sin alinearse con nada. */
+  .toolbar-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-row .type-filters {
+    flex: initial;
+  }
+  .toolbar-row .select-control {
+    width: 100%;
+  }
+
   .app-header {
     flex-wrap: wrap;
     gap: 0.5rem 0.75rem;
